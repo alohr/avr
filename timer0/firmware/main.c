@@ -103,9 +103,9 @@ int main(void)
     for (;;) {
 	if ((t1 = micros()) - t0 > 2000) {
 	    t0 = micros();
+	    /* toggle PB5 - scope should display 2ms square waves */
 	    PORTB ^= _BV(PB5);
 	}
-
     }
 
     return 0;

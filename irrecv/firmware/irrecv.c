@@ -68,7 +68,7 @@ void irrecv_setup(void)
   // set pin modes
 
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
-  sbi(DDRA, PA0); // IR activity indicator
+  sbi(DDRB, PB5); // IR activity indicator
 #else
   sbi(DDRB, PB2); // IR activity indicator
 #endif
@@ -119,7 +119,7 @@ void irrecv_setup(void)
 ISR(TIMER0_OVF_vect)
 {
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
-  PORTA |= _BV(PA0);
+  PORTB |= _BV(PB5);
 #else
   PORTB |= _BV(PB2);
 #endif
@@ -181,9 +181,9 @@ ISR(TIMER0_OVF_vect)
 
 #if 0
   if (irdata == MARK) {
-    PORTA |= _BV(PA0);
+    PORTB |= _BV(PB5);
   } else {
-    PORTA &= ~(_BV(PA0));
+    PORTB &= ~(_BV(PB5));
   }
 #endif
 
@@ -192,9 +192,8 @@ ISR(TIMER0_OVF_vect)
     timer0_milli_count = TIMER0_MILLI_COUNT;
   }
 
-  // PORTA ^= (1 << PA0); // Toggle A0
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
-  PORTA &= ~(_BV(PA0));
+  PORTB &= ~(_BV(PB5));
 #else
   PORTB &= ~(_BV(PB2));
 #endif
@@ -548,4 +547,3 @@ static long decodeJVC(decode_results *results) {
  * c-basic-offset: 2
  * End:
  */
-
