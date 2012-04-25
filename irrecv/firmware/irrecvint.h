@@ -13,8 +13,7 @@
 #define IRremoteint_h
 
 #define CLKFUDGE 3      // fudge factor for clock interrupt overhead
-#define CLK 256      	// max value for clock (timer0)
-
+#define CLK 65536      	// max value for clock (timer1)
 #define PRESCALE 8      // timer 0 clock prescale
 #define SYSCLOCK F_CPU	// CPU clock frequency
 
@@ -32,8 +31,8 @@
 #endif
 
 // clock timer reset value
-#define INIT_TIMER_COUNT0 (CLK - USECPERTICK * CLKSPERUSEC + CLKFUDGE)
-#define RESET_TIMER0 TCNT0 = (uint8_t) (INIT_TIMER_COUNT0)
+#define INIT_TIMER_COUNT1 (CLK - USECPERTICK * CLKSPERUSEC + CLKFUDGE)
+#define RESET_TIMER1 TCNT1 = (uint16_t) (INIT_TIMER_COUNT1)
 
 // pulse parameters in usec
 #define NEC_HDR_MARK	9000

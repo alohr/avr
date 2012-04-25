@@ -34,35 +34,6 @@ static long decodeRC6(decode_results *results);
 static long decodeJVC(decode_results *results);
 #endif
 
-#define TIMER0_MILLI_COUNT 1000 / USECPERTICK
-
-uint8_t timer0_milli_count = (uint8_t) TIMER0_MILLI_COUNT;
-volatile uint8_t timer0_millis = 0;
-
-uint8_t millis()
-{
-  uint8_t m;
-  uint8_t oldSREG = SREG;
-
-  // disable interrupts while we read timer0_millis or we might get an
-  // inconsistent value (e.g. in the middle of a write to timer0_millis)
-  cli();
-  m = timer0_millis;
-  SREG = oldSREG;
-
-  return m;
-}
-
-uint8_t millis_reset(void)
-{
-  uint8_t oldSREG = SREG;
-  cli();
-  timer0_millis = 0;
-  SREG = oldSREG;
-
-  return 0;
-}
-
 void irrecv_setup(void)
 {
   // set pin modes
@@ -79,36 +50,27 @@ void irrecv_setup(void)
   irparams.rcvstate = STATE_IDLE;
   irparams.rawlen = 0;
 
-  // setup pulse clock timer interrupt
-  TCCR0A = 0;
-
-  // Prescale /8 (16M/8 = 0.5 microseconds per tick)
-  // Therefore, the timer interval can range from 0.5 to 128 microseconds
-  // depending on the reset value (255 to 0)
-
-#if F_CPU == 8000000
+#if F_CPU == 8000000 || F_CPU == 16000000
   // prescale /8
-  cbi(TCCR0B, CS02);
-  sbi(TCCR0B, CS01);
-  cbi(TCCR0B, CS00);
+  TCCR1A = 0;
+  TCCR1B = 0x02;
 #elif F_CPU == 1000000
-  // No prescaling
-  cbi(TCCR0B, CS02);
-  cbi(TCCR0B, CS01);
-  sbi(TCCR0B, CS00);
+  // no prescaling
+  TCCR1A = 0;
+  TCCR1B = 0x01;
 #else
 #error Unknown F_CPU
 #endif
 
-  // Timer0 overflow interrupt enable
-  sbi(TIMSK, TOIE0);
+  // Timer1 overflow interrupt enable
+  sbi(TIMSK, TOIE1);
 
-  RESET_TIMER0;
+  RESET_TIMER1;
 
   sei();  // enable interrupts
 }
 
-// TIMER0 interrupt code to collect raw data.
+// TIMER1 interrupt code to collect raw data.
 // Widths of alternating SPACE, MARK are recorded in rawbuf.
 // Recorded in ticks of 50 microseconds.
 // rawlen counts the number of entries recorded so far.
@@ -116,7 +78,7 @@ void irrecv_setup(void)
 // As soon as a SPACE gets long, ready is set, state switches to IDLE, timing of SPACE continues.
 // As soon as first MARK arrives, gap width is recorded, ready is cleared, and new logging starts
 
-ISR(TIMER0_OVF_vect)
+ISR(TIMER1_OVF_vect)
 {
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
   PORTB |= _BV(PB5);
@@ -124,7 +86,7 @@ ISR(TIMER0_OVF_vect)
   PORTB |= _BV(PB2);
 #endif
 
-  RESET_TIMER0;
+  RESET_TIMER1;
 
   uint8_t irdata = ((PINB & _BV(PB4)) != 0);
 
@@ -186,11 +148,6 @@ ISR(TIMER0_OVF_vect)
     PORTB &= ~(_BV(PB5));
   }
 #endif
-
-  if (--timer0_milli_count == 0) {
-    ++timer0_millis;
-    timer0_milli_count = TIMER0_MILLI_COUNT;
-  }
 
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
   PORTB &= ~(_BV(PB5));

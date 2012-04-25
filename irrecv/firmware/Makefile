@@ -16,17 +16,12 @@
 
 include ../../lib/mk/fuses.mk
 
-#DEVICE     = attiny2313
 DEVICE     = attiny4313
-#DEVICE     = attiny85
-CLOCK      = 8000000
+CLOCK      = 16000000
+FUSES      = $(FUSES_4313_EXT)
+
 PROGRAMMER = -c avrisp2 -P usb
-
 OBJECTS    = main.o irrecv.o
-
-#FUSES      = $(FUSES_2313_AT8)
-FUSES      = $(FUSES_4313_AT8)
-#FUSES      = $(FUSES_85_AT8)
 
 # Tune the lines below only if you know what you are doing:
 
@@ -65,7 +60,7 @@ load: all
 	bootloadHID main.hex
 
 clean:
-	/bin/rm -f main.hex main.elf $(OBJECTS) *~
+	/bin/rm -f main.hex main.elf main.map $(OBJECTS) *~
 
 # file targets:
 main.elf: $(OBJECTS)

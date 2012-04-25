@@ -44,7 +44,6 @@ enum {
 
 void process(decode_results *r)
 {
-    unsigned long value = 0;
     if (r->value == REPEAT)
 	return;
 
@@ -98,10 +97,7 @@ void process(decode_results *r)
 
 int main(void)
 {
-    decode_results r;
-    uint8_t t0, t1, delaytime = 6;
-
-    r.value = 0;
+    decode_results r = { .value = 0 };
 
 #ifdef __AVR_ATtiny4313__
     // PD2, PD3, PD4 = output
@@ -115,29 +111,14 @@ int main(void)
     /* DDRB |= _BV(PB4); */
 #endif
 
-#ifdef TEST_PB2
-    DDRB |= _BV(PB2);
-
-    for (;;) {
-	PORTB ^= (1 << PB2);
-	_delay_ms(500);
-    }
-#else 
-
     irrecv_setup();
-    t0 = millis_reset();
 
     for (;;) {
 	if (irrecv_decode(&r)) {
 	    process(&r);
 	    irrecv_resume();
 	}
-
-	if ((t1 = millis() - t0 >= delaytime)) {
-	    t0 = millis_reset();
-	}
     }
-#endif
 
     return 0;
 }
