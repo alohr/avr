@@ -81,6 +81,7 @@ Written by Windell Oskay, http://www.evilmadscientist.com/
 #include <avr/eeprom.h>
 
 #include "board.h"
+#include "timer0.h"
 
 #define shortdelay(); asm("nop\n\t"	     \
 "nop\n\t");
@@ -123,8 +124,10 @@ int main (void)
     uint8_t LED7 = 0;
     uint8_t LED8 = 0;
 
-
     uint8_t robotmode = 0;
+
+    unsigned long t0, t1;
+
 
 
 //Initialization routine: Clear watchdog timer-- this can prevent several things from going wrong.
@@ -145,17 +148,11 @@ int main (void)
 
     DDRB |= _BV(PB5);
 
-
-
-/* Visualize outputs:
-
-   L to R:
-
-   D2 D3 D4 D5 D6 B0 B1 B2 B3
-
-*/
-
-//multiplexed = LowPower;
+    // Visualize outputs:
+    //
+    // L to R:
+    //
+    // D2 D3 D4 D5 D6 B0 B1 B2 B3
 
     debounce = 0;
     debounce2 = 0;
@@ -202,13 +199,20 @@ int main (void)
 	delaytime = 1;
     }
 
+    setup_timer0();
+    t0 = micros();
+
     // main loop
     for (;;) {
 
 	loopcount++;
 
-	if (loopcount > delaytime)
-	{
+//	if (loopcount > delaytime) 	{
+
+	if ((t1 = micros()) - t0 > 12000) {
+	    t0 = micros();
+
+
 	    PORTB |= _BV(PB5);
 	    loopcount = 0;
 	    
@@ -430,4 +434,4 @@ int main (void)
     }	//End main loop
     return 0;
 }
-g
+
