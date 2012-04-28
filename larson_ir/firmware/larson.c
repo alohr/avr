@@ -203,7 +203,7 @@ int main (void)
     }
 
     setup_timer0();
-    setup_irrecv();
+    setup_irrecv(1);
 
     t0 = micros();
 
@@ -421,6 +421,7 @@ int main (void)
 
 		PORTD = (PORTD & 0x83) | pt;
 		shortdelay();
+
 		pt = 0;
 		if (LED5 > j)
 		    pt |= _BV(PB0);
@@ -428,9 +429,8 @@ int main (void)
 		    pt |= _BV(PB1);
 		if (LED7 > j)
 		    pt |= _BV(PB2);
-		if (LED8 > j)
+		if (LED8 > j) 
 		    pt |= _BV(PB3);
-		
 		
 		PORTB = (PORTB & 0xe0) | pt;
 		shortdelay();

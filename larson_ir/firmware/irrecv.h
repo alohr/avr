@@ -21,7 +21,7 @@ typedef struct {
 // Decoded value for NEC when a repeat code is received
 #define REPEAT 0xffffffff
 
-void setup_irrecv();
+void setup_irrecv(uint8_t blinkflag);
 
 int irrecv_decode(decode_results *results);
 void irrecv_resume(void);

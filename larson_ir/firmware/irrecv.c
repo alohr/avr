@@ -35,7 +35,7 @@ static long decodeRC6(decode_results *results);
 static long decodeJVC(decode_results *results);
 #endif
 
-void setup_irrecv(void)
+void setup_irrecv(uint8_t blinkflag)
 {
   // set pin modes
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
@@ -45,11 +45,12 @@ void setup_irrecv(void)
 #endif
 
   cbi(DDRB, PB4); // IR detector pin
-  sbi(PORTB, PB4);
+  sbi(PORTB, PB4); // pull-up
 
   // initialize state machine variables
   irparams.rcvstate = STATE_IDLE;
   irparams.rawlen = 0;
+  irparams.blinkflag = blinkflag;
 
 #if F_CPU == 8000000 || F_CPU == 16000000
   // prescale /8
@@ -144,13 +145,13 @@ ISR(TIMER1_OVF_vect)
     break;
   }
 
-/*
-  if (irdata == MARK) {
-    PORTB |= _BV(PB5);
-  } else {
-    PORTB &= ~(_BV(PB5));
+  if (irparams.blinkflag) {
+    if (irdata == MARK) {
+      PORTB |= _BV(PB5);
+    } else {
+      PORTB &= ~(_BV(PB5));
+    }
   }
-*/
 
 /*
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
@@ -172,10 +173,8 @@ void irrecv_resume(void)
 // Results of decoding are stored in results
 int irrecv_decode(decode_results *results)
 {
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    results->rawbuf = irparams.rawbuf;
-    results->rawlen = irparams.rawlen;
-  }
+  results->rawbuf = irparams.rawbuf;
+  results->rawlen = irparams.rawlen;
 
   if (irparams.rcvstate != STATE_STOP) {
     return ERR;
