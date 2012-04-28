@@ -78,10 +78,13 @@ Written by Windell Oskay, http://www.evilmadscientist.com/
 */
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <avr/eeprom.h>
 
 #include "board.h"
 #include "timer0.h"
+#include "irrecv.h"
+#include "irremote.h"
 
 #define shortdelay(); asm("nop\n\t"	     \
 "nop\n\t");
@@ -99,7 +102,7 @@ int main (void)
 
     int8_t j, m;
 
-    uint8_t position, loopcount, direction;
+    uint8_t position, direction;
 
     uint8_t prescale = 0;	// Prescale timer for  for robot mode
 
@@ -108,10 +111,10 @@ int main (void)
     uint8_t delaytime;
 
     uint8_t skinnyEye = 1;
-    uint8_t  pt, debounce, speedLevel;
+    uint8_t pt, speedLevel;
     uint8_t 	UpdateConfig;
     uint8_t BrightMode;
-    uint8_t debounce2, modeswitched;
+    uint8_t modeswitched;
 
     uint8_t CycleCountLow;
     uint8_t LED0 = 0;
@@ -126,27 +129,30 @@ int main (void)
 
     uint8_t robotmode = 0;
 
-    unsigned long t0, t1;
+    unsigned long t0, t1, tmax = 20000;
+    decode_results irresults = { .value = 0 };
 
-
+#if 0
 
 //Initialization routine: Clear watchdog timer-- this can prevent several things from going wrong.
     MCUSR &= 0xF7;		//Clear WDRF Flag
     WDTCSR	= 0x18;		//Set stupid bits so we can clear timer...
     WDTCSR	= 0x00;
+#endif
 
 //Data direction register: DDR's
 //Port A: 0, 1 are inputs.
 //Port B: 0-3 are outputs, B4 is an input.
 //Port D: 1-6 are outputs, D0 is an input.
 
-    DDRB = 15U;
+    DDRB = 0x0f;
     DDRD = 126U;
 
-//    PORTB = 16;	// Pull-up resistor enabled, PA
+    DDRB |= _BV(PB5);
+
     PORTD = 0;
 
-    DDRB |= _BV(PB5);
+   
 
     // Visualize outputs:
     //
@@ -154,15 +160,12 @@ int main (void)
     //
     // D2 D3 D4 D5 D6 B0 B1 B2 B3
 
-    debounce = 0;
-    debounce2 = 0;
-    loopcount = 254;
     delaytime = 0;
 
     direction = 0;
     position = 0;
     speedLevel = 2;  // Range: 1, 2, 3
-    BrightMode = 0;
+    BrightMode = 1;
     CycleCountLow = 0;
     UpdateConfig = 0;
     modeswitched = 0;
@@ -200,22 +203,31 @@ int main (void)
     }
 
     setup_timer0();
+    setup_irrecv();
+
     t0 = micros();
+
+    BrightMode = 1;
 
     // main loop
     for (;;) {
 
-	loopcount++;
+	if (irrecv_decode(&irresults)) {
+	    if (irresults.value != REPEAT) {
+		switch (irresults.value) {
+		case CHANNEL_1:
+		    PORTB ^= _BV(PB5);
+		    break;
+		}
+	    }
+	    irrecv_resume();
+	}
 
-//	if (loopcount > delaytime) 	{
-
-	if ((t1 = micros()) - t0 > 12000) {
+	if ((t1 = micros()) - t0 > tmax) {
 	    t0 = micros();
 
 
-	    PORTB |= _BV(PB5);
-	    loopcount = 0;
-	    
+#if 0	    
 	    CycleCountLow++;
 	    if (CycleCountLow > 250)
 		CycleCountLow = 0;
@@ -233,9 +245,9 @@ int main (void)
 		    // We separate out this section to minimize the effect.
 		}
 	    }
+#endif
 
 	    // Check for button press
-
 	    if (robotmode) {
 		prescale++;
 		if (speedLevel == 3)
@@ -326,111 +338,106 @@ int main (void)
 		LED7 = LEDs[7];
 		LED8 = LEDs[8];
 	    }
-	    PORTB &= ~(_BV(PB5));
 	}
 
-	if (BrightMode == 0)
-	{		//Multiplexing routine: Each LED is on (1/9) of the time.
-			//  -> Use much less power.
+	if (BrightMode == 0) {	
 	    j = 0;
-	    while (j < 60)		// Truncate brightness at a max value (60) in the interest of speed.
-	    {
+	    while (j < 60) {
+		// Truncate brightness at a max value (60) in the interest of speed.
+		uint8_t portb, portd;
 
+		portd = PORTD & 0x83;
 		if (LED0 > j)
-		    PORTD = 4;
+		    PORTD = portd | _BV(PD2);
 		else
-		    PORTD = 0;
+		    PORTD = portd & ~(_BV(PD2));
 
 		if (LED1 > j)
-		    PORTD = 8;
+		    PORTD = portd | _BV(PD3);
 		else
-		    PORTD = 0;
+		    PORTD = portd & ~(_BV(PD3));
 
 		if (LED2 > j)
-		    PORTD = 16;
+		    PORTD = portd | _BV(PD4);
 		else
-		    PORTD = 0;
+		    PORTD = portd & ~(_BV(PD4));
 
 		if (LED3 > j)
-		    PORTD = 32;
+		    PORTD = portd | _BV(PD5);
 		else
-		    PORTD = 0;
+		    PORTD = portd & ~(_BV(PD5));
 
 		if (LED4 > j)
-		    PORTD = 64;
+		    PORTD = portd | _BV(PD6);
 		else
-		    PORTD = 0;
+		    PORTD = portd & ~(_BV(PD6));
 
+		portb = PORTB & 0xf0;
 		if (LED5 > j) {
-		    PORTB = 17;
-		    PORTD = 0;
-		}
-		else	{
-		    PORTB = 16;
-		    PORTD = 0;
+		    PORTB = portb | _BV(PB0);
+		    PORTD = portd;
+		} else {
+		    PORTB = portb;
+		    PORTD = portd;
 		}
 
 		if (LED6 > j)
-		    PORTB = 18;
+		    PORTB = portb | _BV(PB1);
 		else
-		    PORTB = 16;
+		    PORTB = portb & ~(_BV(PB1));
 
 		if (LED7 > j)
-		    PORTB = 20;
+		    PORTB = portb | _BV(PB2);
 		else
-		    PORTB = 16;
+		    PORTB = portb & ~(_BV(PB2));
 
 		if (LED8 > j)
-		    PORTB = 24;
+		    PORTB = portb | _BV(PB3);
 		else
-		    PORTB = 16;
+		    PORTB = portb & ~(_BV(PB3));
 
 		j++;
 		asm("nop");	 // Delay to make up time difference versus branch.
 		asm("nop");
 		asm("nop");
-		PORTB = 16;
+		PORTB = portb;
 	    }
-
 	}
-	else
-	{		// Full power routine
-
+	else {
+	    // Full power routine
 	    j = 0;
-	    while (j < 70)
-	    {
-
+	    while (j < 70) {
 		pt = 0;
 		if (LED0 > j)
-		    pt = 4;
+		    pt = _BV(PD2);
 		if (LED1 > j)
-		    pt |= 8;
+		    pt |= _BV(PD3);
 		if (LED2 > j)
-		    pt |= 16;
+		    pt |= _BV(PD4);
 		if (LED3 > j)
-		    pt |= 32;
+		    pt |= _BV(PD5);
 		if (LED4 > j)
-		    pt |= 64;
+		    pt |= _BV(PD6);
 
-		PORTD = pt;
+		PORTD = (PORTD & 0x83) | pt;
 		shortdelay();
-		pt = 16;
+		pt = 0;
 		if (LED5 > j)
-		    pt |= 1;
+		    pt |= _BV(PB0);
 		if (LED6 > j)
-		    pt |= 2;
+		    pt |= _BV(PB1);
 		if (LED7 > j)
-		    pt |= 4;
+		    pt |= _BV(PB2);
 		if (LED8 > j)
-		    pt |= 8;
-
-		PORTB = pt;
+		    pt |= _BV(PB3);
+		
+		
+		PORTB = (PORTB & 0xe0) | pt;
 		shortdelay();
-
 		j++;
 	    }
-
 	}
+
     }	//End main loop
     return 0;
 }

@@ -11,6 +11,7 @@
 
 #include <inttypes.h>
 #include <avr/interrupt.h>
+#include <util/atomic.h>
 
 #include "irrecv.h"
 #include "irrecvint.h"
@@ -34,10 +35,9 @@ static long decodeRC6(decode_results *results);
 static long decodeJVC(decode_results *results);
 #endif
 
-void irrecv_setup(void)
+void setup_irrecv(void)
 {
   // set pin modes
-
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
   sbi(DDRB, PB5); // IR activity indicator
 #else
@@ -45,7 +45,7 @@ void irrecv_setup(void)
 #endif
 
   cbi(DDRB, PB4); // IR detector pin
-  sbi(PORTB, PB4); // pull-up
+  sbi(PORTB, PB4);
 
   // initialize state machine variables
   irparams.rcvstate = STATE_IDLE;
@@ -81,11 +81,13 @@ void irrecv_setup(void)
 
 ISR(TIMER1_OVF_vect)
 {
+/*
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
   PORTB |= _BV(PB5);
 #else
   PORTB |= _BV(PB2);
 #endif
+*/
 
   RESET_TIMER1;
 
@@ -150,14 +152,16 @@ ISR(TIMER1_OVF_vect)
   }
 */
 
+/*
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
   PORTB &= ~(_BV(PB5));
 #else
   PORTB &= ~(_BV(PB2));
 #endif
+*/
 }
 
-void irrecv_resume()
+void irrecv_resume(void)
 {
   irparams.rcvstate = STATE_IDLE;
   irparams.rawlen = 0;
@@ -168,11 +172,15 @@ void irrecv_resume()
 // Results of decoding are stored in results
 int irrecv_decode(decode_results *results)
 {
-  results->rawbuf = irparams.rawbuf;
-  results->rawlen = irparams.rawlen;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    results->rawbuf = irparams.rawbuf;
+    results->rawlen = irparams.rawlen;
+  }
+
   if (irparams.rcvstate != STATE_STOP) {
     return ERR;
   }
+
 
 #ifdef COMPILE_DECODE_NEC
   if (decodeNEC(results)) {

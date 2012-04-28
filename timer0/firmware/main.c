@@ -93,7 +93,7 @@ void setup_timer0(void)
 
 int main(void)
 {
-    unsigned long t0, t1;
+    unsigned long t0, t1, tmax = 20000;
 
     DDRB = _BV(PB5);
 
@@ -101,10 +101,12 @@ int main(void)
     t0 = micros();
 
     for (;;) {
-	if ((t1 = micros()) - t0 > 2000) {
+
+	if ((t1 = micros()) - t0 > tmax) {
 	    t0 = micros();
-	    /* toggle PB5 - scope should display 2ms square waves */
+
 	    PORTB ^= _BV(PB5);
+
 	}
     }
 

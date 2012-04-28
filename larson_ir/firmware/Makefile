@@ -23,14 +23,12 @@ CLOCK      = 16000000
 FUSES      = $(FUSES_4313_EXT)
 
 PROGRAMMER = -c avrisp2 -P usb
-OBJECTS    = larson.o timer0.o
+OBJECTS    = larson.o timer0.o irrecv.o
 
 # Tune the lines below only if you know what you are doing:
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
-
-#irrecv.o: irrecv.c irrecv.h irrecvint.h
+COMPILE = avr-gcc -std=gnu99 -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 
 # symbolic targets:
 all:	larson.hex
@@ -83,3 +81,11 @@ disasm:	larson.elf
 
 cpp:
 	$(COMPILE) -E larson.c
+
+# DO NOT DELETE
+
+larson.s: larson.c
+
+irrecv.o: irrecv.h irrecvint.h
+larson.o: board.h timer0.h irrecv.h irremote.h
+timer0.o: timer0.h
