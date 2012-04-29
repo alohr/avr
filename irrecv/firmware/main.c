@@ -1,121 +1,92 @@
 #ifndef F_CPU
-#define F_CPU 8000000UL
+#error F_CPU not defined
 #endif
 
 #include <avr/io.h>
 #include <util/delay.h>
 
 #include "irrecv.h"
+#include "state.h"
 
-#define ONKYO_RC_581S
 
-#ifdef ONKYO_RC_581S
-enum {
-    CHANNEL_1    = 0x4BC0AB54,
-    CHANNEL_2    = 0x4BC06B94,
-    CHANNEL_3    = 0x4BC0EB14,
-    CHANNEL_4    = 0x4BC01BE4,
-    CHANNEL_5    = 0x4BC09B64,
-    CHANNEL_6    = 0x4BC05BA4,
-    CHANNEL_7    = 0x4BC0DB24,
-    CHANNEL_8    = 0x4BC03BC4,
-    CHANNEL_9    = 0x4BC0BB44,
-    CHANNEL_DOWN = 0x4B20F807,
-    CHANNEL_UP   = 0x4B207887,
-    VOLUME_UP    = 0x4BC040BF,
-    VOLUME_DOWN  = 0x4BC0C03F,
-    MODE         = 0x4B2010EF,
-    ON_OFF       = 0x4B20D32C,
-    SLEEP        = 0x4BC0BA45,
-};
-#endif
+void process(ledstate *state, const decode_results *r);
 
-#ifdef RM_130
-enum {
-    ON_OFF       = 0x0c,
-    MUTE         = 0x0d,
-    TV_AV        = 0x0b,
-    VOLUME_UP    = 0x10,
-    VOLUME_DOWN  = 0x11,
-    CHANNEL_UP   = 0x20,
-    CHANNEL_DOWN = 0x21
-};
-#endif
-
-void process(decode_results *r)
+void led(int8_t i)
 {
-    if (r->value == REPEAT)
-	return;
+    uint8_t portd = PORTD & 0x83;
+    uint8_t portb = PORTB & 0xd0;
 
-#if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
-
-#ifdef ONKYO_RC_581S
-    switch (r->value) {
-    case CHANNEL_1:
-	PORTD ^= _BV(PD2);
+    switch (i) {
+    case 0:
+	PORTD = portd | _BV(PD2);
+	PORTB = portb;
 	break;
-    case CHANNEL_2:
-	PORTD ^= _BV(PD3);
+    case 1:
+	PORTD = portd | _BV(PD3);
+	PORTB = portb;
 	break;
-    case CHANNEL_3:
-	PORTD ^= _BV(PD4);
+    case 2:
+	PORTD = portd | _BV(PD4);
+	PORTB = portb;
 	break;
+    case 3:
+	PORTD = portd | _BV(PD5);
+	PORTB = portb;
+	break;
+    case 4:
+	PORTD = portd | _BV(PD6);
+	PORTB = portb;
+	break;
+    case 5:
+	PORTD = portd;
+	PORTB = portb | _BV(PB0);
+	break;
+    case 6:
+	PORTD = portd;
+	PORTB = portb | _BV(PB1);
+	break;
+    case 7:
+	PORTD = portd;
+	PORTB = portb | _BV(PB2);
+	break;
+    case 8:
+	PORTD = portd;
+	PORTB = portb | _BV(PB3);
+	break;
+    default:
+	PORTD = portd;
+	PORTB = portb;
     }
-#endif
-
-#ifdef RM_130
-    switch (r->value & 0xff) {
-    case CHANNEL_UP:
-	PORTD ^= _BV(PD2);
-	break;
-    case MUTE:
-	PORTD ^= _BV(PD3);
-	break;
-    case CHANNEL_DOWN:
-	PORTD ^= _BV(PD4);
-	break;
-    }
-#endif
-
-
-#else
-    switch (r->value) {
-    case CHANNEL_1:
-	PORTB ^= _BV(PB5);
-	break;
-    case CHANNEL_2:
-	PORTB ^= _BV(PB3);
-	break;
-    case CHANNEL_3:
-	PORTB ^= _BV(PB4);
-	break;
-    }
-#endif
 }
 
-//#define TEST_PB2
 
 int main(void)
 {
     decode_results r = { .value = 0 };
+    ledstate state = { .on = 0, .led = 0, .toggle = 0xff };
 
-#ifdef __AVR_ATtiny4313__
-    // PD2, PD3, PD4 = output
-    DDRD |= _BV(PD2);
-    DDRD |= _BV(PD3);
-    DDRD |= _BV(PD4);
-#else
-    // PB5, PB3, PB4 = output
-    /* DDRB |= _BV(PB5); */
-    /* DDRB |= _BV(PB3); */
-    /* DDRB |= _BV(PB4); */
-#endif
+    /*
+     *         7 6 5 4  3 2 1 0
+     *  PORTD  0 1 1 1  1 1 0 0 = 0x7c (~ 0x83)
+     *  PORTB  0 0 1 0  1 1 1 1 = 0x2f (~ 0xd0)
+     *
+     */
 
-    irrecv_setup();
+    DDRD = 0x7c;
+    DDRB = 0x2f;
+
+    setup_irrecv(1);
 
     for (;;) {
 	if (irrecv_decode(&r)) {
-	    process(&r);
+	    process(&state, &r);
+
+	    if (state.on) {
+		led(state.led);
+	    } else {
+		led(0xff);
+	    }
+
 	    irrecv_resume();
 	}
     }

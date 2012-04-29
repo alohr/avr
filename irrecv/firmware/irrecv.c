@@ -34,10 +34,9 @@ static long decodeRC6(decode_results *results);
 static long decodeJVC(decode_results *results);
 #endif
 
-void irrecv_setup(void)
+void setup_irrecv(uint8_t blinkflag)
 {
   // set pin modes
-
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
   sbi(DDRB, PB5); // IR activity indicator
 #else
@@ -50,6 +49,7 @@ void irrecv_setup(void)
   // initialize state machine variables
   irparams.rcvstate = STATE_IDLE;
   irparams.rawlen = 0;
+  irparams.blinkflag = blinkflag;
 
 #if F_CPU == 8000000 || F_CPU == 16000000
   // prescale /8
@@ -81,11 +81,13 @@ void irrecv_setup(void)
 
 ISR(TIMER1_OVF_vect)
 {
+/*
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
   PORTB |= _BV(PB5);
 #else
   PORTB |= _BV(PB2);
 #endif
+*/
 
   RESET_TIMER1;
 
@@ -142,22 +144,24 @@ ISR(TIMER1_OVF_vect)
     break;
   }
 
-/*
-  if (irdata == MARK) {
-    PORTB |= _BV(PB5);
-  } else {
-    PORTB &= ~(_BV(PB5));
+  if (irparams.blinkflag) {
+    if (irdata == MARK) {
+      PORTB |= _BV(PB5);
+    } else {
+      PORTB &= ~(_BV(PB5));
+    }
   }
-*/
 
+/*
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
   PORTB &= ~(_BV(PB5));
 #else
   PORTB &= ~(_BV(PB2));
 #endif
+*/
 }
 
-void irrecv_resume()
+void irrecv_resume(void)
 {
   irparams.rcvstate = STATE_IDLE;
   irparams.rawlen = 0;
@@ -170,6 +174,7 @@ int irrecv_decode(decode_results *results)
 {
   results->rawbuf = irparams.rawbuf;
   results->rawlen = irparams.rawlen;
+
   if (irparams.rcvstate != STATE_STOP) {
     return ERR;
   }

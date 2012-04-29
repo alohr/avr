@@ -19,22 +19,23 @@ include ../../lib/mk/fuses.mk
 DEVICE     = attiny4313
 CLOCK      = 16000000
 FUSES      = $(FUSES_4313_EXT)
+#IRREMOTE   = onkyo581s
+IRREMOTE   = rc5
 
 PROGRAMMER = -c avrisp2 -P usb
-OBJECTS    = main.o irrecv.o
+OBJECTS    = main.o irrecv.o process.o
 
 # Tune the lines below only if you know what you are doing:
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
-
-#irrecv.o: irrecv.c irrecv.h irrecvint.h
+COMPILE = avr-gcc -std=gnu99 -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+VPATH   = $(IRREMOTE)
 
 # symbolic targets:
 all:	main.hex
 
 .c.o:
-	$(COMPILE) -c $< -o $@
+	$(COMPILE) -c -I$(PWD) $< -o $@
 
 .S.o:
 	$(COMPILE) -x assembler-with-cpp -c $< -o $@
@@ -81,3 +82,7 @@ disasm:	main.elf
 
 cpp:
 	$(COMPILE) -E main.c
+
+# DO NOT DELETE
+irrecv.o: irrecv.h irrecvint.h
+main.o: main.c irrecv.h
