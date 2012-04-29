@@ -3,7 +3,9 @@
 #include <util/delay.h>
 
 #include <irrecv.h>
+#include <timer0.h>
 #include <state.h>
+
 
 enum {
     ON_OFF       = 0x0c,
@@ -18,6 +20,7 @@ enum {
 void process(ledstate *state, const decode_results *r)
 {
     uint8_t toggle = (r->value & 0x800) != 0;
+    unsigned long t;
 
     if (toggle != state->toggle) {
 	state->toggle = toggle;
@@ -31,9 +34,16 @@ void process(ledstate *state, const decode_results *r)
 	    if (--state->led < 0)
 		state->led = 8;
 	    break;
+	case TV_AV:
+	    state->run = !state->run;
+	    break;
 	case ON_OFF:
-	    state->on = !state->on;
+	    if ((t = millis()) - state->toggle_time > 500) {
+		state->toggle_time = t;
+		state->on = !state->on;
+	    }
 	    break;
 	}
+
     }
 }

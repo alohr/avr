@@ -23,7 +23,7 @@ FUSES      = $(FUSES_4313_EXT)
 IRREMOTE   = rc5
 
 PROGRAMMER = -c avrisp2 -P usb
-OBJECTS    = main.o irrecv.o process.o
+OBJECTS    = main.o irrecv.o process.o timer0.o
 
 # Tune the lines below only if you know what you are doing:
 
@@ -85,4 +85,4 @@ cpp:
 
 # DO NOT DELETE
 irrecv.o: irrecv.h irrecvint.h
-main.o: main.c irrecv.h
+main.o: main.c irrecv.h timer0.h

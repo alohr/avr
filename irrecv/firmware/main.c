@@ -6,8 +6,8 @@
 #include <util/delay.h>
 
 #include "irrecv.h"
+#include "timer0.h"
 #include "state.h"
-
 
 void process(ledstate *state, const decode_results *r);
 
@@ -62,8 +62,19 @@ void led(int8_t i)
 
 int main(void)
 {
-    decode_results r = { .value = 0 };
-    ledstate state = { .on = 0, .led = 0, .toggle = 0xff };
+    decode_results r = {
+	.value = 0 
+    };
+
+    ledstate state = {
+	.on = 0,
+	.run = 0,
+	.led = 0,
+	.toggle = 0xff,
+	.toggle_time = 0
+    };
+
+    unsigned long t0, t1, tmax = 200;
 
     /*
      *         7 6 5 4  3 2 1 0
@@ -75,19 +86,28 @@ int main(void)
     DDRD = 0x7c;
     DDRB = 0x2f;
 
+    setup_timer0();
     setup_irrecv(1);
+
+    t0 = millis();
 
     for (;;) {
 	if (irrecv_decode(&r)) {
 	    process(&state, &r);
-
-	    if (state.on) {
-		led(state.led);
-	    } else {
-		led(0xff);
-	    }
-
 	    irrecv_resume();
+	}
+
+	if (state.on) {
+	    if (state.run) {
+		if ((t1 = millis()) - t0 > tmax) {
+		    t0 = t1;
+		    if (++state.led == 9)
+			state.led = 0;
+		}
+	    }
+	    led(state.led);
+	} else {
+	    led(0xff);
 	}
     }
 
