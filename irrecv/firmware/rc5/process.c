@@ -30,12 +30,18 @@ void process(ledstate *state, const decode_results *r)
 
 	switch (r->value & 0xff) {
 	case CHANNEL_UP:
-	    if (++state->led == 9)
-		state->led = 0;
+	    state->flags.direction = 0;
+	    if (!state->flags.run) {
+		if (++state->led == 9)
+		    state->led = 0;
+	    }
 	    break;
 	case CHANNEL_DOWN:
-	    if (--state->led < 0)
-		state->led = 8;
+	    state->flags.direction = 1;
+	    if (!state->flags.run) {
+		if (--state->led < 0)
+		    state->led = 8;
+	    }
 	    break;
 	case VOLUME_UP:
 	    if (state->delay_time > MIN_DELAY)

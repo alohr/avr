@@ -1,9 +1,9 @@
 
 typedef struct ledstate {
     struct {
-	uint8_t on:1;
-	uint8_t run:1;
-	uint8_t direction:1;
+	int on:1;
+	int run:1;
+	int direction:1;
     } flags;
 
     int8_t toggle;

@@ -103,8 +103,13 @@ int main(void)
 	    if (state.flags.run) {
 		if ((t1 = millis()) - t0 > state.delay_time) {
 		    t0 = t1;
-		    if (++state.led == 9)
-			state.led = 0;
+		    if (state.flags.direction == 0) {
+			if (++state.led == 9)
+			    state.led = 0;
+		    } else {
+			if (--state.led < 0)
+			    state.led = 8;
+		    }
 		}
 	    }
 	    led(state.led);
