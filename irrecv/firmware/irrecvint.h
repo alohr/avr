@@ -89,9 +89,6 @@
 #define TICKS_HIGH(us) (int) (( (long) (us) * UTOL / (USECPERTICK * 100) + 1))
 #endif
 
-
-#ifndef DEBUG
-
 #define MATCH(measured_ticks, desired_us) \
     ((measured_ticks) >= TICKS_LOW(desired_us) && (measured_ticks) <= TICKS_HIGH(desired_us))
 
@@ -101,9 +98,6 @@
 #define MATCH_SPACE(measured_ticks, desired_us) \
     MATCH((measured_ticks), (desired_us) - MARK_EXCESS)
 
-// Debugging versions are in IRremote.cpp
-#endif
-
 // receiver states
 #define STATE_IDLE     2
 #define STATE_MARK     3
@@ -112,14 +106,11 @@
 
 // information for the interrupt handler
 typedef struct {
-  uint8_t recvpin;           // pin for IR data from detector
   uint8_t rcvstate;          // state machine
-  uint8_t blinkflag;         // TRUE to enable blinking of pin 13 on IR processing
   unsigned int timer;     // state timer, counts 50uS ticks.
   unsigned int rawbuf[RAWBUF]; // raw data
   uint8_t rawlen;         // counter of entries in rawbuf
-} 
-irparams_t;
+} irparams_t;
 
 // Defined in IRremote.cpp
 extern volatile irparams_t irparams;
@@ -132,7 +123,7 @@ extern volatile irparams_t irparams;
 
 #define NEC_BITS  32
 #define SONY_BITS 12
-#define JVC_BITS 16
+#define JVC_BITS  16
 
 #define MIN_RC5_SAMPLES 11
 #define MIN_RC6_SAMPLES 1

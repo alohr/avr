@@ -34,7 +34,7 @@ static long decodeRC6(decode_results *results);
 static long decodeJVC(decode_results *results);
 #endif
 
-void setup_irrecv(uint8_t blinkflag)
+void setup_irrecv()
 {
   // set pin modes
 #if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
@@ -49,7 +49,6 @@ void setup_irrecv(uint8_t blinkflag)
   // initialize state machine variables
   irparams.rcvstate = STATE_IDLE;
   irparams.rawlen = 0;
-  irparams.blinkflag = blinkflag;
 
 #if F_CPU == 8000000 || F_CPU == 16000000
   // prescale /8
@@ -144,12 +143,10 @@ ISR(TIMER1_OVF_vect)
     break;
   }
 
-  if (irparams.blinkflag) {
-    if (irdata == MARK) {
-      PORTB |= _BV(PB5);
-    } else {
-      PORTB &= ~(_BV(PB5));
-    }
+  if (irdata == MARK) {
+    PORTB |= _BV(PB5);
+  } else {
+    PORTB &= ~(_BV(PB5));
   }
 
 /*

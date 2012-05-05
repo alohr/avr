@@ -21,7 +21,7 @@ typedef struct {
 // Decoded value for NEC when a repeat code is received
 #define REPEAT 0xffffffff
 
-void setup_irrecv(uint8_t blinkflag);
+void setup_irrecv(void);
 
 int irrecv_decode(decode_results *results);
 void irrecv_resume(void);
@@ -29,7 +29,7 @@ void irrecv_resume(void);
 // Some useful constants
 
 #define USECPERTICK 50  // microseconds per clock interrupt tick
-#define RAWBUF 76 // Length of raw duration buffer
+#define RAWBUF 68 // Length of raw duration buffer
 
 // Marks tend to be 100us too long, and spaces 100us too short
 // when received due to sensor lag.

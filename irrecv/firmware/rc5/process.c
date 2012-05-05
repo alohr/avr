@@ -6,7 +6,6 @@
 #include <timer0.h>
 #include <state.h>
 
-
 enum {
     ON_OFF       = 0x0c,
     MUTE         = 0x0d,
@@ -14,7 +13,11 @@ enum {
     VOLUME_UP    = 0x10,
     VOLUME_DOWN  = 0x11,
     CHANNEL_UP   = 0x20,
-    CHANNEL_DOWN = 0x21
+    CHANNEL_DOWN = 0x21,
+
+    MIN_DELAY    = 10,
+    MAX_DELAY    = 500,
+    DELAY_STEP   = 10
 };
 
 void process(ledstate *state, const decode_results *r)
@@ -34,16 +37,23 @@ void process(ledstate *state, const decode_results *r)
 	    if (--state->led < 0)
 		state->led = 8;
 	    break;
+	case VOLUME_UP:
+	    if (state->delay_time > MIN_DELAY)
+		state->delay_time -= DELAY_STEP;
+	    break;
+	case VOLUME_DOWN:
+	    if (state->delay_time < MAX_DELAY)
+		state->delay_time += DELAY_STEP;
+	    break;
 	case TV_AV:
-	    state->run = !state->run;
+	    state->flags.run = !state->flags.run;
 	    break;
 	case ON_OFF:
 	    if ((t = millis()) - state->toggle_time > 500) {
 		state->toggle_time = t;
-		state->on = !state->on;
+		state->flags.on = !state->flags.on;
 	    }
 	    break;
 	}
-
     }
 }

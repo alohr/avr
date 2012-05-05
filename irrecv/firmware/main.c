@@ -11,6 +11,16 @@
 
 void process(ledstate *state, const decode_results *r);
 
+ledstate state = {
+    .flags.on = 0,
+    .flags.run = 0,
+    .flags.direction = 0,
+    .led = 0,
+    .toggle = 0xff,
+    .toggle_time = 0,
+    .delay_time = 200
+};
+
 void led(int8_t i)
 {
     uint8_t portd = PORTD & 0x83;
@@ -66,15 +76,7 @@ int main(void)
 	.value = 0 
     };
 
-    ledstate state = {
-	.on = 0,
-	.run = 0,
-	.led = 0,
-	.toggle = 0xff,
-	.toggle_time = 0
-    };
-
-    unsigned long t0, t1, tmax = 200;
+    unsigned long t0, t1;
 
     /*
      *         7 6 5 4  3 2 1 0
@@ -87,7 +89,7 @@ int main(void)
     DDRB = 0x2f;
 
     setup_timer0();
-    setup_irrecv(1);
+    setup_irrecv();
 
     t0 = millis();
 
@@ -97,9 +99,9 @@ int main(void)
 	    irrecv_resume();
 	}
 
-	if (state.on) {
-	    if (state.run) {
-		if ((t1 = millis()) - t0 > tmax) {
+	if (state.flags.on) {
+	    if (state.flags.run) {
+		if ((t1 = millis()) - t0 > state.delay_time) {
 		    t0 = t1;
 		    if (++state.led == 9)
 			state.led = 0;
