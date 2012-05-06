@@ -17,8 +17,15 @@
 include ../../lib/mk/fuses.mk
 
 DEVICE     = attiny4313
-CLOCK      = 16000000
-FUSES      = $(FUSES_4313_EXT)
+
+# use external cyrstal:
+#CLOCK      = 16000000
+#FUSES      = $(FUSES_4313_EXT)
+
+# use internal oscillator
+CLOCK      = 8000000
+FUSES      = $(FUSES_4313_AT8)
+
 #IRREMOTE   = onkyo581s
 IRREMOTE   = rc5
 
