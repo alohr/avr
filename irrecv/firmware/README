@@ -1,0 +1,7 @@
+Test program for the irrecv code. The circuit I used is a modified
+Larscon scanner from Evil Mad Science:
+
+http://wiki.evilmadscience.com/Larson_Scanner
+
+I replaced the push button at port PB4 with an IR receiver and added
+an IR activity indicator LED at PB5.
