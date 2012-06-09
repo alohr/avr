@@ -14,7 +14,7 @@
 #                is connected.
 # FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
-include ../../lib/mk/fuses.mk
+include ../lib/mk/fuses.mk
 
 DEVICE     = attiny4313
 
