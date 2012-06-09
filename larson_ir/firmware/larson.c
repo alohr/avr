@@ -80,17 +80,57 @@ Written by Windell Oskay, http://www.evilmadscientist.com/
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
+#include <util/delay.h>
 
 #include "board.h"
 #include "timer0.h"
 #include "irrecv.h"
 #include "irremote.h"
 
-#define shortdelay(); asm("nop\n\t"	     \
-"nop\n\t");
+#define shortdelay(); asm("nop\n\tnop\n\t");
 
+enum {
+    MIN_DELAY     = 2000,
+    MAX_DELAY     = 30000,
+    DEFAULT_DELAY = 20000,
+    DELAY_STEP    = 1000,
+};
 
 uint16_t eepromWord __attribute__((section(".eeprom")));
+
+union {
+    uint16_t data;
+    struct {
+	int brightMode : 1;
+	int skinnyEye  : 1;
+	int delaytime  : 14;
+    } s;
+} config;
+
+unsigned long t0, t1, delay_time = DEFAULT_DELAY;
+unsigned long last_update_time;
+
+decode_results irresults = { .value = 0 };
+uint8_t skinnyEye = 0;
+uint8_t LEDBright[4] = {1U,4U,2U,1U};   // Relative brightness of scanning eye positions
+
+
+void toggle_skinnyEye(void)
+{
+    skinnyEye = !skinnyEye;
+
+    if (skinnyEye) {
+	LEDBright[0] = 0;
+	LEDBright[1] = 4;
+	LEDBright[2] = 1;
+	LEDBright[3] = 0;
+    } else {
+	LEDBright[0] = 1;
+	LEDBright[1] = 4;
+	LEDBright[2] = 2;
+	LEDBright[3] = 1;
+    }
+}
 
 int main (void)
 {
@@ -98,25 +138,17 @@ int main (void)
 
     int8_t eyeLoc[5]; // List of which LED has each role, leading edge through tail.
 
-    uint8_t LEDBright[4] = {1U,4U,2U,1U};   // Relative brightness of scanning eye positions
-
     int8_t j, m;
 
     uint8_t position, direction;
 
-    uint8_t prescale = 0;	// Prescale timer for  for robot mode
-
     uint8_t ILED, RLED, MLED;
 
-    uint8_t delaytime;
+    uint8_t pt;
+    uint8_t BrightMode = 1;
+    uint8_t UpdateConfig = 0;
+    uint8_t CycleCountLow = 0;
 
-    uint8_t skinnyEye = 1;
-    uint8_t pt, speedLevel;
-    uint8_t 	UpdateConfig;
-    uint8_t BrightMode;
-    uint8_t modeswitched;
-
-    uint8_t CycleCountLow;
     uint8_t LED0 = 0;
     uint8_t LED1 = 0;
     uint8_t LED2 = 0;
@@ -127,32 +159,13 @@ int main (void)
     uint8_t LED7 = 0;
     uint8_t LED8 = 0;
 
-    uint8_t robotmode = 0;
-
-    unsigned long t0, t1, tmax = 20000;
-    decode_results irresults = { .value = 0 };
-
-#if 0
-
-//Initialization routine: Clear watchdog timer-- this can prevent several things from going wrong.
-    MCUSR &= 0xF7;		//Clear WDRF Flag
-    WDTCSR	= 0x18;		//Set stupid bits so we can clear timer...
-    WDTCSR	= 0x00;
-#endif
-
-//Data direction register: DDR's
-//Port A: 0, 1 are inputs.
-//Port B: 0-3 are outputs, B4 is an input.
-//Port D: 1-6 are outputs, D0 is an input.
+    // Data direction register: DDR's
+    // Port A: 0, 1 are inputs.
+    // Port B: 0-3 are outputs, B4 is an input.
+    // Port D: 1-6 are outputs, D0 is an input.
 
     DDRB = 0x0f;
-    DDRD = 126U;
-
-    DDRB |= _BV(PB5);
-
-    PORTD = 0;
-
-   
+    DDRD = 0x7e;
 
     // Visualize outputs:
     //
@@ -160,184 +173,143 @@ int main (void)
     //
     // D2 D3 D4 D5 D6 B0 B1 B2 B3
 
-    delaytime = 0;
+    // Check EEPROM values
+    /* config.data = eeprom_read_word(&eepromWord); */
+    /* BrightMode = config.s.brightMode; */
+    /* skinnyEye = config.s.skinnyEye; */
+    /* delay_time = config.s.delaytime; */
 
     direction = 0;
     position = 0;
-    speedLevel = 2;  // Range: 1, 2, 3
-    BrightMode = 1;
-    CycleCountLow = 0;
-    UpdateConfig = 0;
-    modeswitched = 0;
-
-
-    if (skinnyEye) {
-	LEDBright[0] = 0;
-	LEDBright[1] = 4;
-	LEDBright[2] = 1;
-	LEDBright[3] = 0;
-    }
-
-
-    //Check EEPROM values:
-
-    pt = (uint8_t) (eeprom_read_word(&eepromWord)) ;
-    speedLevel = pt >> 4;
-    BrightMode = pt & 1;
-
-    if (pt == 0xFF)
-    {
-	BrightMode = 0;
-    }
-
-
-    if (speedLevel > 3)
-	speedLevel = 1;
-
-    if ((speedLevel == 2) || (speedLevel == 3)) {
-	delaytime = 0;
-    }
-    else
-    {   speedLevel = 1;
-	delaytime = 1;
-    }
 
     setup_timer0();
-    setup_irrecv(1);
+    setup_irrecv();
 
     t0 = micros();
-
-    BrightMode = 1;
 
     // main loop
     for (;;) {
 
 	if (irrecv_decode(&irresults)) {
-	    if (irresults.value != REPEAT) {
-		switch (irresults.value) {
-		case CHANNEL_1:
-		    PORTB ^= _BV(PB5);
-		    break;
+
+	    switch (irresults.value & 0xff) {
+	    case VOLUME_UP:
+		if (delay_time > MIN_DELAY)
+		    delay_time -= DELAY_STEP;
+		break;
+	    case VOLUME_DOWN:
+		if (delay_time < MAX_DELAY)
+		    delay_time += DELAY_STEP;
+		break;
+	    case MUTE:
+		if ((t1 = micros()) - last_update_time > 500000UL) {
+		    last_update_time = t1;
+		    BrightMode = !BrightMode;
+		    UpdateConfig = 1;
 		}
+		break;
+	    case TV_AV:
+		if ((t1 = micros()) - last_update_time > 500000UL) {
+		    last_update_time = t1;
+		    toggle_skinnyEye();
+		    UpdateConfig = 1;
+		}
+		break;
 	    }
 	    irrecv_resume();
 	}
 
-	if ((t1 = micros()) - t0 > tmax) {
-	    t0 = micros();
+	if ((t1 = micros()) - t0 > delay_time) {
+	    t0 = t1;
 
-
-#if 0	    
-	    CycleCountLow++;
-	    if (CycleCountLow > 250)
+	    if (++CycleCountLow > 250)
 		CycleCountLow = 0;
 
 	    if (UpdateConfig) {
 		// Need to save configuration byte to EEPROM
 		if (CycleCountLow > 100) {
 		    // Avoid burning EEPROM in event of flaky power connection resets
-
 		    UpdateConfig = 0;
-		    pt = (speedLevel << 4) | (BrightMode & 1);
-		    eeprom_write_word(&eepromWord, (uint8_t) pt);
-		    // Note: this function causes a momentary
-		    // brightness glitch while it writes the EEPROM.
+		    config.s.brightMode = BrightMode;
+		    config.s.skinnyEye = skinnyEye;
+		    config.s.delaytime = delay_time;
+
+		    eeprom_write_word(&eepromWord, config.data);
+		    // Note: this function causes a momentary brightness glitch while it
+		    // writes the EEPROM.
 		    // We separate out this section to minimize the effect.
+
+		    {
+			uint8_t i = 0;
+			for (i = 0; i < 5; i++) {
+			    PORTB |= _BV(PB5);
+			    _delay_ms(100);
+			    PORTB &= ~(_BV(PB5));
+			}
+		    }
+
 		}
 	    }
-#endif
 
-	    // Check for button press
-	    if (robotmode) {
-		prescale++;
-		if (speedLevel == 3)
-		    prescale++;
+	    position++;
 
-		if (prescale >= 11) {	// Fine tune the step time with this factor.
-		    position++;
-		    prescale = 0;
-		}
+	    if (position >= 128) {
+		position = 0;
+		direction = !direction;
+	    }
 
-		if (position > 18)
-		    position = 0;
+	    if (direction == 0)  // Moving to right, as viewed from front.
+	    {
+		ILED = (15+position) >> 4;
+		RLED = (15+position) - (ILED << 4);
+		MLED = 15 - RLED;
+	    }
+	    else
+	    {
+		ILED = (127 - position) >> 4;
+		MLED = (127 - position)  - (ILED << 4);
+		RLED =  15 - MLED;
+	    }
 
-		// Direction: LEDs chase DOWN TOWARDS BATTERY CONNECTIONS.
-		LED8 = 30 * ((position >> 1) == 0);
-		LED7 = 30 * ((position >> 1) == 1);
-		LED6 = 30 * ((position >> 1) == 2);
-		LED5 = 30 * ((position >> 1) == 3);
-		LED4 = 30 * ((position >> 1) == 4);
-		LED3 = 30 * ((position >> 1) == 5);
-		LED2 = 30 * ((position >> 1) == 6);
-		LED1 = 30 * ((position >> 1) == 7);
-		LED0 = 30 * ((position >> 1) == 8);
+	    j = 0;
+	    while (j < 9) {
+		LEDs[j] = 0;
+		j++;
+	    }
 
-	    } else {
-		position++;
-
-		if (speedLevel == 3)
-		    position++;
-
-		if (position >= 128) {
-		    position = 0;
-		    direction = !direction;
-		}
-
-		if (direction == 0)  // Moving to right, as viewed from front.
-		{
-		    ILED = (15+position) >> 4;
-		    RLED = (15+position) - (ILED << 4);
-		    MLED = 15 - RLED;
-		}
+	    j = 0;
+	    while (j < 5) {
+		if (direction == 0)
+		    m = ILED + (2 - j);	// e.g., eyeLoc[0] = ILED + 2;
 		else
-		{
-		    ILED = (127 - position) >> 4;
-		    MLED = (127 - position)  - (ILED << 4);
-		    RLED =  15 - MLED;
-		}
+		    m = ILED + (j - 2);  // e.g., eyeLoc[0] = ILED - 2;
 
-		j = 0;
-		while (j < 9) {
-		    LEDs[j] = 0;
-		    j++;
-		}
+		if (m > 8)
+		    m -= (2 * (m - 8));
 
-		j = 0;
-		while (j < 5) {
-		    if (direction == 0)
-			m = ILED + (2 - j);	// e.g., eyeLoc[0] = ILED + 2;
-		    else
-			m = ILED + (j - 2);  // e.g., eyeLoc[0] = ILED - 2;
+		if (m < 0)
+		    m *= -1;
 
-		    if (m > 8)
-			m -= (2 * (m - 8));
+		eyeLoc[j] = m;
 
-		    if (m < 0)
-			m *= -1;
-
-		    eyeLoc[j] = m;
-
-		    j++;
-		}
-
-		j = 0;		// For each of the eye parts...
-		while (j < 4) {
-
-		    LEDs[eyeLoc[j]]   += LEDBright[j]*RLED;
-		    LEDs[eyeLoc[j+1]] += LEDBright[j]*MLED;
-
-		    j++;
-		}
-		LED0 = LEDs[0];
-		LED1 = LEDs[1];
-		LED2 = LEDs[2];
-		LED3 = LEDs[3];
-		LED4 = LEDs[4];
-		LED5 = LEDs[5];
-		LED6 = LEDs[6];
-		LED7 = LEDs[7];
-		LED8 = LEDs[8];
+		j++;
 	    }
+
+	    j = 0;		// For each of the eye parts...
+	    while (j < 4) {
+		LEDs[eyeLoc[j]]   += LEDBright[j]*RLED;
+		LEDs[eyeLoc[j+1]] += LEDBright[j]*MLED;
+		j++;
+	    }
+	    LED0 = LEDs[0];
+	    LED1 = LEDs[1];
+	    LED2 = LEDs[2];
+	    LED3 = LEDs[3];
+	    LED4 = LEDs[4];
+	    LED5 = LEDs[5];
+	    LED6 = LEDs[6];
+	    LED7 = LEDs[7];
+	    LED8 = LEDs[8];
 	}
 
 	if (BrightMode == 0) {	

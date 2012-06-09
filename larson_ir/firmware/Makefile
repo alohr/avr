@@ -17,9 +17,9 @@
 include ../../lib/mk/fuses.mk
 
 DEVICE     = attiny4313
-#CLOCK      = 1000000
+#CLOCK      = 8000000
 CLOCK      = 16000000
-#FUSES      = $(FUSES_4313_AT1)
+#FUSES      = $(FUSES_4313_AT8)
 FUSES      = $(FUSES_4313_EXT)
 
 PROGRAMMER = -c avrisp2 -P usb
