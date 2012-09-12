@@ -131,11 +131,13 @@ ISR(TIMER1_OVF_vect)
     break;
   }
 
+/*
   if (irdata == MARK) {
     PORTD |= _BV(PD4);
   } else {
     PORTD &= ~(_BV(PD4));
   }
+*/
 }
 
 void irrecv_resume(void)
@@ -363,10 +365,7 @@ static long decodeRC5(decode_results *results) {
 
   // Success
   results->bits = nbits;
-  if (results->value == data)
-    results->value = REPEAT;
-  else
-    results->value = data;
+  results->value = data;
   results->decode_type = RC5;
   return DECODED;
 }
