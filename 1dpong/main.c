@@ -16,46 +16,126 @@ enum {
 };
 
 uint8_t direction[] = {
-    0b0011,
-    0b0011,
-    0b0101,
-    0b0101,
-    0b0110,
-    0b0110,
+    0b0011, // LED1
+    0b0011, // LED2
+    0b0101, // LED3
+    0b0101, // LED4
+    0b0110, // LED5
+    0b0110, // LED6
 
-    0b1001,
-    0b1001,
-    0b1010,
-    0b1010,
-    0b1100,
-    0b1100,
+    0b1001, // LED7
+    0b1001, // LED8
+    0b1010, // LED9
+    0b1100, // LED11
+    0b1010, // LED10
+    0b1100, // LED12
 };
 
 uint8_t port[] = {
-    0b0001,
-    0b0010,
-    0b0001,
-    0b0100,
-    0b0010,
-    0b0100,
+    0b0001, // LED1
+    0b0010, // LED2
+    0b0001, // LED3
+    0b0100, // LED4
+    0b0010, // LED5
+    0b0100, // LED6
 
-    0b0001,
-    0b1000,
-    0b0010,
-    0b1000,
-    0b0100,
-    0b1000
+    0b0001, // LED7
+    0b1000, // LED8
+    0b0010, // LED9
+    0b0100, // LED11
+    0b1000, // LED10
+    0b1000, // LED12
 };
 
 volatile int button0_pressed = 0;
 volatile int button1_pressed = 0;
 
-void beep(void)
+/* Buzzer pin definitions */
+#define BUZZER1		4
+#define BUZZER1_PORT	PORTD
+#define BUZZER2		5
+#define BUZZER2_PORT	PORTD
+
+static void delay_us(uint16_t x)
 {
-    TCCR0A |= _BV(COM0B1);
-    _delay_ms(50);
-    TCCR0A &= ~_BV(COM0B1);
+    while (x-- > 0) {
+	_delay_us(1);
+    }
 }
+
+static void winner_sound(void)
+{
+    uint8_t x, y;
+
+    /* Toggle the buzzer at various speeds */
+    for (x = 250; x > 70; x--) {
+	for (y = 0; y < 3; y++) {
+	    BUZZER2_PORT |= _BV(BUZZER2);
+	    BUZZER1_PORT &= ~(_BV(BUZZER1));
+
+	    delay_us(x);
+
+	    BUZZER2_PORT &= ~(_BV(BUZZER2));
+	    BUZZER1_PORT |= _BV(BUZZER1);
+	    
+	    delay_us(x);
+	}
+    }
+}
+
+static void buzz_sound(uint16_t buzz_length_ms, uint16_t buzz_delay_us)
+{
+    uint32_t buzz_length_us;
+
+    buzz_length_us = buzz_length_ms * (uint32_t)1000;
+
+    while (buzz_length_us > buzz_delay_us*2) {
+	buzz_length_us -= buzz_delay_us*2;
+
+	/* toggle the buzzer at various speeds */
+	BUZZER1_PORT &= ~(_BV(BUZZER1));
+	BUZZER2_PORT |= _BV(BUZZER2);
+
+	delay_us(buzz_delay_us);
+
+	BUZZER1_PORT |= _BV(BUZZER1);
+	BUZZER2_PORT &= ~(_BV(BUZZER2));
+	delay_us(buzz_delay_us);
+    }
+}
+
+void loser_sound(void)
+{
+    buzz_sound(255, 1000);
+}
+
+static void toner(uint8_t which, uint16_t buzz_length_ms)
+{
+    switch (which) {
+    case 0:
+	buzz_sound(buzz_length_ms, 1136); 
+	break;
+    
+    case 1:
+	buzz_sound(buzz_length_ms, 568); 
+	break;
+
+    case 2:
+	buzz_sound(buzz_length_ms, 851); 
+	break;
+
+    case 3:
+	buzz_sound(buzz_length_ms, 638); 
+	break;
+    }
+}
+
+/* void beep(void) */
+/* { */
+/*     TCCR0A |= _BV(COM0B1); */
+/*     _delay_ms(50); */
+/*     TCCR0A &= ~_BV(COM0B1); */
+/* } */
 
 ISR(INT0_vect)
 {
@@ -63,7 +143,7 @@ ISR(INT0_vect)
 	_delay_ms(DELAY_MS_DEBOUCE);
 	if (bit_is_clear(PIND, PD2)) {
 	    ++button0_pressed;
-	    beep();
+	    toner(2, 5);
 	}
     }
 }
@@ -74,7 +154,7 @@ ISR(INT1_vect)
     	_delay_ms(DELAY_MS_DEBOUCE);
     	if (bit_is_clear(PIND, PD3)) {
 	    ++button1_pressed;
-	    beep();
+	    toner(3, 5);
     	}
     }
 }
@@ -192,13 +272,13 @@ int mainloop(int start_player)
 
 	switch (i) {
 	case LED_MIN:
-	    if ((good = (inc == 1 || check_button(1)))) {
+	    if ((good = (inc == 1 || check_button(0)))) {
 		inc = 1;
 		--delay;
 	    }
 	    break;
 	case LED_MAX:
-	    if ((good = (inc == -1 || check_button(0)))) {
+	    if ((good = (inc == -1 || check_button(1)))) {
 		inc = -1;
 		--delay;
 	    }
@@ -210,6 +290,7 @@ int mainloop(int start_player)
 	
 	if (!good) {
 	    /* who won? */
+	    loser_sound();
 	    return inc == 1 ? PLAYER_0 : PLAYER_1;
 	}
 
@@ -222,6 +303,11 @@ int main(void)
     int start_player = 0;
 
     setup();
+
+    DDRD |= _BV(BUZZER1);
+    DDRD |= _BV(BUZZER2);
+
+    winner_sound();
 
     for (;;) {
 	flash(3);
