@@ -48,18 +48,16 @@ void setup_irrecv()
 
 #if F_CPU == 8000000 || F_CPU == 16000000
   // prescale /8
-  TCCR1A = 0;
-  TCCR1B = 0x02;
+  TCCR1B |= _BV(CS11);
 #elif F_CPU == 1000000
   // no prescaling
-  TCCR1A = 0;
-  TCCR1B = 0x01;
+  TCCR1B |= _BV(CS10);
 #else
 #error Unknown F_CPU
 #endif
 
   // Timer1 overflow interrupt enable
-  sbi(TIMSK, TOIE1);
+  TIMSK = _BV(TOIE1);
 
   RESET_TIMER1;
 
@@ -131,13 +129,11 @@ ISR(TIMER1_OVF_vect)
     break;
   }
 
-/*
   if (irdata == MARK) {
     PORTD |= _BV(PD4);
   } else {
     PORTD &= ~(_BV(PD4));
   }
-*/
 }
 
 void irrecv_resume(void)
