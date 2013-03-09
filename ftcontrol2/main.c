@@ -66,7 +66,7 @@ void set_motor_pins(const state *s)
     }
 }
 
-void irinterpret(state *s, decode_results *r)
+void irinterpret(state *s, const decode_results *r)
 {
     if (r->decode_type == RC5) {
 	int toggle = (r->value & 0x800) != 0;
@@ -85,19 +85,26 @@ void irinterpret(state *s, decode_results *r)
 		s->direction = BACKWARD;
 		break;
 	    }
-	} else {
-	    switch (r->value & 0xff) {
-	    case TV_AV:
-		// turn servo left
-		s->turn = -1;
-		s->timestamp = millis();
-		break;
-	    case MUTE:
-		// turn servo right
-		s->turn = 1;
-		s->timestamp = millis();
-		break;
+	}
+
+	switch (r->value & 0xff) {
+	case TV_AV:
+	    for (int i = 0; i < 2; i++) {
+		PORTB |= _BV(PB5);
+		_delay_ms(20);
+		PORTB &= ~(_BV(PB5));
+		_delay_ms(20);
 	    }
+
+	    // turn servo left
+	    s->turn = -1;
+	    s->timestamp = millis();
+	    break;
+	case MUTE:
+	    // turn servo right
+	    s->turn = 1;
+	    s->timestamp = millis();
+	    break;
 	}
     }
 }
@@ -129,16 +136,25 @@ int main(void)
     /*
      * PB0 ir receiver input
      * PB1 servo control out
+     * PB4 ir indicator led
+     * PB5 indicator led
      * 
      * PD3 motor1 control out A
      * PD4 motor1 control out B
      */
 
-    DDRB = _BV(PB1);
-    PORTB = ~(_BV(PB1)); /* enable pull-ups */
+    DDRB = _BV(PB1) | _BV(PB4) | _BV(PB5);
+    PORTB = ~(_BV(PB1) | _BV(PB4) | _BV(PB5)); /* enable pull-ups */
     
     DDRD = _BV(PD3) | _BV(PD4);
     PORTD = ~(_BV(PD3) | _BV(PD4)); /* enable pull-ups */
+
+    for (int i = 0; i < 10; i++) {
+	PORTB |= _BV(PB5);
+	_delay_ms(50);
+	PORTB &= ~(_BV(PB5));
+	_delay_ms(50);
+    }
 
     setup_timer0();
     setup_pwm();

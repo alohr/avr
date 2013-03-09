@@ -37,7 +37,7 @@ static long decodeJVC(decode_results *results);
 void setup_irrecv()
 {
   // set pin modes
-  // DDRD |= _BV(PD4); // IR activity indicator
+  DDRB |= _BV(PB4); // IR activity indicator
 
   DDRB &= ~(_BV(PB0)); // IR detector pin
   PORTB |= _BV(PB0); // pull-up
@@ -129,13 +129,11 @@ ISR(TIMER2_OVF_vect)
     break;
   }
 
-  /*
   if (irdata == MARK) {
-    PORTD |= _BV(PD4);
+    PORTB |= _BV(PB4);
   } else {
-    PORTD &= ~(_BV(PD4));
+    PORTB &= ~(_BV(PB4));
   }
-  */
 }
 
 void irrecv_resume(void)

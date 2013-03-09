@@ -22,16 +22,6 @@
 #define ERR 0
 #define DECODED 1
 
-#if 0
-// defines for setting and clearing register bits
-#ifndef cbi
-#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
-#endif
-#ifndef sbi
-#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
-#endif
-#endif
-
 // clock timer reset value
 #define INIT_TIMER_COUNT2 (CLK - USECPERTICK * CLKSPERUSEC + CLKFUDGE)
 #define RESET_TIMER2 TCNT2 = INIT_TIMER_COUNT2

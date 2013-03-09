@@ -19,7 +19,8 @@ include ../lib/mk/fuses.mk
 
 DEVICE     = atmega8
 CLOCK      = 16000000
-FUSES      = $(FUSES_4313_AT8)
+FUSES 	   = $(FUSES_M8_EXT)
+
 PROGRAMMER = -c avrisp2 -P usb
 
 OBJECTS    = main.o timer0.o irrecv.o
