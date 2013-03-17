@@ -25,7 +25,7 @@ enum {
     BACKWARD = 1,
 
     STEERING_DIFF_US = 350,
-    STEERING_MID_US = 1550,
+    STEERING_MID_US = 1530,
     STEERING_MIN_US = STEERING_MID_US - STEERING_DIFF_US,
     STEERING_MAX_US = STEERING_MID_US + STEERING_DIFF_US,
     STEERING_PERIOD_US = 20000,
@@ -89,11 +89,6 @@ void irinterpret(state *s, const decode_results *r)
 
 	switch (r->value & 0xff) {
 	case TV_AV:
-	    for (int i = 0; i < 2; i++) {
-		PORTB |= _BV(PB5);
-		_delay_ms(20);
-	    }
-
 	    // turn servo left
 	    s->turn = -1;
 	    s->timestamp = millis();
@@ -109,14 +104,14 @@ void irinterpret(state *s, const decode_results *r)
 
 void setup_pwm(void)
 {
-    // Fast PWM, mode 14
+    // fast PWM, mode 14
    TCCR1A = _BV(WGM11);
    TCCR1B = _BV(WGM13) | _BV(WGM12);
 
-   // Clear OC1B on compare match (set output to low)
+   // clear OC1B on compare match (set output to low)
    TCCR1A |= _BV(COM1A1);
 
-   // Set prescaler /8
+   // set prescaler /8
    TCCR1B |= _BV(CS11);
 
    ICR1 = PRESCALE_ADJUST(STEERING_PERIOD_US);
