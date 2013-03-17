@@ -92,8 +92,6 @@ void irinterpret(state *s, const decode_results *r)
 	    for (int i = 0; i < 2; i++) {
 		PORTB |= _BV(PB5);
 		_delay_ms(20);
-		PORTB &= ~(_BV(PB5));
-		_delay_ms(20);
 	    }
 
 	    // turn servo left
