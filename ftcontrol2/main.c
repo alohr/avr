@@ -25,6 +25,7 @@ enum {
     BACKWARD = 1,
 
     STEERING_DIFF_US = 350,
+    STEERING_STEP_US = 50,
     STEERING_MID_US = 1530,
     STEERING_MIN_US = STEERING_MID_US - STEERING_DIFF_US,
     STEERING_MAX_US = STEERING_MID_US + STEERING_DIFF_US,
@@ -89,13 +90,13 @@ void irinterpret(state *s, const decode_results *r)
 
 	switch (r->value & 0xff) {
 	case TV_AV:
-	    // turn servo left
-	    s->turn = -1;
+	    // turn servo left (min)
+	    s->turn = -STEERING_DIFF_US / STEERING_STEP_US;
 	    s->timestamp = millis();
 	    break;
 	case MUTE:
-	    // turn servo right
-	    s->turn = 1;
+	    // turn servo right (max)
+	    s->turn = STEERING_DIFF_US / STEERING_STEP_US;
 	    s->timestamp = millis();
 	    break;
 	}
@@ -142,16 +143,11 @@ int main(void)
     DDRD = _BV(PD3) | _BV(PD4);
     PORTD = ~(_BV(PD3) | _BV(PD4)); /* enable pull-ups */
 
-    for (int i = 0; i < 10; i++) {
-	PORTB |= _BV(PB5);
-	_delay_ms(50);
-	PORTB &= ~(_BV(PB5));
-	_delay_ms(50);
-    }
-
     setup_timer0();
     setup_pwm();
     setup_irrecv();
+
+    int deflection = STEERING_MID_US;
 
     for (;;) {
 	if (irrecv_decode(&r)) {
@@ -165,13 +161,19 @@ int main(void)
 	    if (millis() - s.timestamp > STEERING_TIMEOUT_MS) {
 		s.turn = 0;
 	    } else {
-		OCR1A = PRESCALE_ADJUST(STEERING_MIN_US);
+		deflection = s.turn * STEERING_STEP_US + STEERING_MID_US;
+		if (deflection < STEERING_MIN_US)
+		    deflection = STEERING_MIN_US;
+		OCR1A = PRESCALE_ADJUST(deflection);
 	    }
 	} else if (s.turn > 0) {
 	    if (millis() - s.timestamp > STEERING_TIMEOUT_MS) {
 		s.turn = 0;
 	    } else {
-		OCR1A = PRESCALE_ADJUST(STEERING_MAX_US);
+		deflection = s.turn * STEERING_STEP_US + STEERING_MID_US;
+		if (deflection > STEERING_MAX_US)
+		    deflection = STEERING_MAX_US;
+		OCR1A = PRESCALE_ADJUST(deflection);
 	    }
 	} else {
 	    OCR1A = PRESCALE_ADJUST(STEERING_MID_US);
