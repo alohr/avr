@@ -1,0 +1,37 @@
+[Eagle]
+Version="06 00 00"
+Platform="Mac OS X"
+Serial="62191E841E-LSR-WLM-1EL"
+Globals="Globals"
+Desktop="Desktop"
+
+[Globals]
+AutoSaveProject=1
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/frames.lbr"
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/holes.lbr"
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/jumper.lbr"
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/supply1.lbr"
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/supply2.lbr"
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/switch-misc.lbr"
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/switch-omron.lbr"
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/transistor-npn.lbr"
+UsedLibrary="/Applications/EAGLE-6.0.0/lbr/wirepad.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/SparkFun-Aesthetics.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/SparkFun-Connectors.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/SparkFun-DiscreteSemi.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/SparkFun-Electromechanical.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/SparkFun-LED.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/SparkFun-Passives.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/SparkFun-Resistors.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/avr-6.lbr"
+UsedLibrary="/Users/andreas/Eagle/external_lbr/ohw-logo.lbr"
+
+[Win_1]
+Type="Control Panel"
+Loc="77 34 1179 649"
+State=2
+Number=0
+
+[Desktop]
+Screen="1920 1200"
+Window="Win_1"
