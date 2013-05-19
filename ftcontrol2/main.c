@@ -31,7 +31,8 @@ enum {
     STEERING_MAX_US = STEERING_MID_US + STEERING_DIFF_US,
     STEERING_PERIOD_US = 20000,
 
-    STEERING_TIMEOUT_MS = 105
+    STEERING_TIMEOUT_MS = 105,
+    MOTOR2_TIMEOUT_MS = 105,
 };
 
 #define PRESCALE_ADJUST(x) ((x) << 1)
@@ -44,26 +45,45 @@ typedef struct {
     unsigned long timestamp;
 
     // motor1
-    int run;
-    int direction;
+    int run0;
+    int direction0;
+
+    // motor2
+    int run1;
+    int direction1;
+    unsigned long timestamp1;
 
 } state;
 
 void set_motor_pins(const state *s)
 {
-    if (s->run) {
+    if (s->run0) {
 	// motor1 is running
-	if (s->direction) {
-	    PORTD &= ~(_BV(PD4)); 
+	if (s->direction0) {
+	    PORTD &= ~(_BV(PD4));
 	    PORTD |= _BV(PD3);
 	} else {
-	    PORTD &= ~(_BV(PD3)); 
+	    PORTD &= ~(_BV(PD3));
 	    PORTD |= _BV(PD4);
 	}
     } else {
 	// motor not running -> turn all off
-	PORTD &= ~(_BV(PD3)); 
-	PORTD &= ~(_BV(PD4)); 
+	PORTD &= ~(_BV(PD3));
+	PORTD &= ~(_BV(PD4));
+    }
+
+    if (s->run1) {
+	// motor2 is running
+	if (s->direction1) {
+	    PORTD &= ~(_BV(PD6));
+	    PORTD |= _BV(PD7);
+	} else {
+	    PORTD &= ~(_BV(PD7));
+	    PORTD |= _BV(PD6);
+	}
+    } else {
+	PORTD &= ~(_BV(PD6));
+	PORTD &= ~(_BV(PD7));
     }
 }
 
@@ -77,13 +97,13 @@ void irinterpret(state *s, const decode_results *r)
 
 	    switch (r->value & 0xff) {
 	    case ON_OFF:
-		s->run = !s->run;
+		s->run0 = !s->run0;
 		break;
 	    case CHANNEL_UP:
-		s->direction = FORWARD;
+		s->direction0 = FORWARD;
 		break;
 	    case CHANNEL_DOWN:
-		s->direction = BACKWARD;
+		s->direction0 = BACKWARD;
 		break;
 	    }
 	}
@@ -98,6 +118,16 @@ void irinterpret(state *s, const decode_results *r)
 	    // turn servo right (max)
 	    s->turn = STEERING_DIFF_US / STEERING_STEP_US;
 	    s->timestamp = millis();
+	    break;
+	case VOLUME_UP:
+	    s->run1 = 1;
+	    s->direction1 = FORWARD;
+	    s->timestamp1 = millis();
+	    break;
+	case VOLUME_DOWN:
+	    s->run1 = 1;
+	    s->direction1 = BACKWARD;
+	    s->timestamp1 = millis();
 	    break;
 	}
     }
@@ -130,18 +160,20 @@ int main(void)
     /*
      * PB0 ir receiver input
      * PB1 servo control out
-     * PB4 ir indicator led
-     * PB5 indicator led
-     * 
+     *
+     * PD6 motor2 control out A
+     * PD7 motor2 control out B
+     *
      * PD3 motor1 control out A
      * PD4 motor1 control out B
      */
 
-    DDRB = _BV(PB1) | _BV(PB4) | _BV(PB5);
-    PORTB = ~(_BV(PB1) | _BV(PB4) | _BV(PB5)); /* enable pull-ups */
-    
-    DDRD = _BV(PD3) | _BV(PD4);
-    PORTD = ~(_BV(PD3) | _BV(PD4)); /* enable pull-ups */
+
+    DDRB = 0x03;
+    PORTB = ~(0x03); /* enable pull-ups */
+
+    DDRD = 0xd8;
+    PORTD = 0x27; /* enable pull-ups */
 
     setup_timer0();
     setup_pwm();
@@ -153,6 +185,10 @@ int main(void)
 	if (irrecv_decode(&r)) {
 	    irinterpret(&s, &r);
 	    irrecv_resume();
+	}
+
+	if (s.run1 && millis() - s.timestamp1 > MOTOR2_TIMEOUT_MS) {
+	    s.run1 = 0;
 	}
 
 	set_motor_pins(&s);
@@ -178,6 +214,7 @@ int main(void)
 	} else {
 	    OCR1A = PRESCALE_ADJUST(STEERING_MID_US);
 	}
+
     }
 
     return 0;
