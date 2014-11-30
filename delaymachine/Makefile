@@ -1,6 +1,7 @@
 include ../lib/mk/fuses.mk
 
 DEVICE     = atmega328p
+
 #CLOCK      = 16000000
 #FUSES 	   = $(FUSES_M328P_EXT)
 

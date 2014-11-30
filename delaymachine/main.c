@@ -111,14 +111,23 @@ void setup(void)
 
 void setup_timer2(void)
 {
+#if F_CPU == 8000000
     // prescale /32
     TCCR2A = 0;
     TCCR2B = _BV(CS21) | _BV(CS20);
-    
+#elif F_CPU == 16000000
+    // prescale /64
+    TCCR2A = 0;
+    TCCR2B = _BV(CS22);
+#else
+#error F_CPU not recognized
+#endif
+
     // overflow interrupt enable
     TIMSK2 |= _BV(TOIE2);
-
     TCNT2 = TIMER2_RESET_TO_400_MICROS;
+
+    sei();
 }
 
 void analog_init(analogvalue_t *value)
@@ -133,14 +142,14 @@ int analog_read(int chan, analogvalue_t *value)
 {
     uint8_t low, high;
 
-    /* AVCC with external capacitor at AREF pin, select channel */
+    // AVCC with external capacitor at AREF pin, select channel
     ADMUX = (_BV(REFS0) | (chan & 0x0f));
 
-    ADCSRA |= _BV(ADSC); /* start single conversion */
+    // start single conversion
+    ADCSRA |= _BV(ADSC);
 
-    /* wait for conversion to complete */
-    while (ADCSRA & _BV(ADSC))
-	;
+    // wait for conversion to complete
+    loop_until_bit_is_clear(ADCSRA, ADSC);
 
     low  = ADCL;
     high = ADCH;
@@ -248,19 +257,21 @@ void display_set(volatile display_t *d, int value)
 ISR(TIMER2_OVF_vect)
 {
     // timer overflows every 400 micros
+
+#ifdef DEBUG_TIMER2
+    PORTD ^= _BV(PIN_LED_RED);
+#endif
+
     TCNT2 = TIMER2_RESET_TO_400_MICROS;
 
     if (display.on)
         display_update(&display);
 }
 
-static void settle_on_low(volatile uint8_t *port, uint8_t mask)
+void settle_on_low(volatile uint8_t *port, uint8_t mask)
 {
-    enum {
-        SETTLE_ON_LOW_TIMEOUT_MS  = 20,
-    };
-
     long t = 0, t0 = 0;
+    enum { SETTLE_ON_LOW_TIMEOUT_MS = 20 };
 
     loop_until_bit_is_clear(*port, mask);
     t0 = millis();
@@ -272,19 +283,19 @@ static void settle_on_low(volatile uint8_t *port, uint8_t mask)
     }
 }
 
-static void setup_int0(void)
+void setup_int0(void)
 {
     // set INT0 to trigger on falling edge
     EICRA |= _BV(ISC01);
     EICRA &= ~_BV(ISC00);
 }
 
-static void enable_int0()
+void enable_int0()
 {
     EIMSK |= _BV(INT0);
 }
 
-static void disable_int0()
+void disable_int0()
 {
     EIMSK &= ~_BV(INT0);
 }
@@ -294,24 +305,13 @@ volatile long t0 = 0;
 ISR(INT0_vect)
 {
     disable_int0();
-    t0 = millis();
-    // disable_int0();
+    t0 = micros();
 }
 
 int main(void)
 {
-#if 0
-    setup();
-
-    for (;;) {
-        PORTD ^= _BV(PIN_LED_RED);
-        _delay_ms(500);
-    }
-#endif
-
-    // long t0 = 0, t = 0;
-    long t = 0;
     int pin = PIN_LED_BLUE;
+
     analogvalue_t delay;
 
     setup();
@@ -332,8 +332,8 @@ int main(void)
 
     for (;;) {
         if ((PIND & _BV(PIN_SW1)) == 0) {
-            // t0 = millis();
-            while ((t = millis()) - t0 < delay.v)
+            long tmax = 1000L * delay.v;
+            while (micros() - t0 < tmax)
                 ;
             PORTD |= _BV(pin);
         } else {
@@ -344,7 +344,6 @@ int main(void)
         if ((PIND & _BV(PIN_SW2)) == 0) {
             settle_on_low(&PIND, PIN_SW2);
             loop_until_bit_is_set(PIND, PIN_SW2);
-
             display_toggle(&display);
         }
 

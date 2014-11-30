@@ -105,5 +105,4 @@ void setup_timer0(void)
 #endif
 
     sei();
-
 }
