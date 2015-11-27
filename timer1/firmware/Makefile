@@ -1,29 +1,10 @@
-# Name: Makefile
-# Author: <insert your name here>
-# Copyright: <insert your copyright message here>
-# License: <insert your license reference here>
-
-# This is a prototype Makefile. Modify it according to your needs.
-# You should at least check the settings for
-# DEVICE ....... The AVR device you compile for
-# CLOCK ........ Target AVR clock rate in Hertz
-# OBJECTS ...... The object files created from your source files. This list is
-#                usually the same as the list of source files with suffix ".o".
-# PROGRAMMER ... Options to avrdude which define the hardware you use for
-#                uploading to the AVR and the interface where this hardware
-#                is connected.
-# FUSES ........ Parameters for avrdude to flash the fuses appropriately.
-
-include ../../lib/mk/fuses.mk
-
-DEVICE     = attiny4313
+#DEVICE     = attiny4313
+DEVICE     = attiny85
 CLOCK      = 16000000
-#CLOCK      = 8000000
-
 PROGRAMMER = -c avrisp2 -P usb
+OBJECTS    = $(DEVICE).o
 
-OBJECTS    = main.o
-FUSES      = $(FUSES_4313_EXT)
+include fuses.mk
 
 # Tune the lines below only if you know what you are doing:
 
