@@ -4,7 +4,7 @@ CLOCK      = 16000000
 PROGRAMMER = -c avrisp2 -P usb
 OBJECTS    = $(DEVICE).o
 
-include fuses.mk
+include ../lib/mk/fuses.mk
 
 # Tune the lines below only if you know what you are doing:
 
