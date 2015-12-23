@@ -4,7 +4,7 @@
 #include <util/delay.h>
 
 enum {
-    DELAY_MS_DEBOUCE = 50,
+    DELAY_MS_DEBOUNCE = 50,
     DELAY_MS_MOVE = 300,
 
     LED_MIN = 0,
@@ -140,7 +140,7 @@ static void toner(uint8_t which, uint16_t buzz_length_ms)
 ISR(INT0_vect)
 {
     if (bit_is_clear(PIND, PD2)) {
-	_delay_ms(DELAY_MS_DEBOUCE);
+	_delay_ms(DELAY_MS_DEBOUNCE);
 	if (bit_is_clear(PIND, PD2)) {
 	    ++button0_pressed;
 	    toner(2, 5);
@@ -151,7 +151,7 @@ ISR(INT0_vect)
 ISR(INT1_vect)
 {
     if (bit_is_clear(PIND, PD3)) {
-    	_delay_ms(DELAY_MS_DEBOUCE);
+    	_delay_ms(DELAY_MS_DEBOUNCE);
     	if (bit_is_clear(PIND, PD3)) {
 	    ++button1_pressed;
 	    toner(3, 5);
