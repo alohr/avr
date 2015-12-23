@@ -17,9 +17,11 @@
 
 include ../lib/mk/fuses.mk
 
-DEVICE     = atmega8
+#DEVICE     = atmega8
+DEVICE     = atmega328p
 CLOCK      = 16000000
-FUSES 	   = $(FUSES_M8_EXT)
+#FUSES 	   = $(FUSES_M8_EXT)
+FUSES 	   = $(FUSES_M328P_EXT)
 
 PROGRAMMER = -c avrisp2 -P usb
 

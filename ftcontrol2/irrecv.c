@@ -48,16 +48,34 @@ void setup_irrecv()
 
 #if F_CPU == 16000000
   // prescale /8
+#if defined(TCCR2)
+  // atmega8
   TCCR2 = _BV(CS21);
+#else
+  // atmega328p
+  TCCR2A = 0;
+  TCCR2B = _BV(CS21);
+#endif
+
 #elif F_CPU == 1000000
   // no prescaling
+#if defined(TCCR2)
   TCCR2 = _BV(CS20);
+#else
+  TCCR2A = 0;
+  TCCR2B = _BV(CS20);
+#endif
+
 #else
 #error Unknown F_CPU
 #endif
 
   // Timer2 overflow interrupt enable
+#if defined(TIMSK)
   TIMSK |= _BV(TOIE2);
+#else
+  TIMSK2 |= _BV(TOIE2);
+#endif
 
   RESET_TIMER2;
 

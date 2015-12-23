@@ -85,9 +85,25 @@ unsigned long micros(void)
 
 void setup_timer0(void)
 {
+    /* Timer0 prescale /64 */
+#if defined(TCCR0) && defined(CS01) && defined(CS00)
+    // this combination is for the standard atmega8
     TCCR0 = _BV(CS01) | _BV(CS00); /* prescale /64 */
+#elif defined(TCCR0B) && defined(CS01) && defined(CS00)
+    // this combination is for the standard 168/328/1280/2560
+    TCCR0B = _BV(CS01) | _BV(CS00); /* prescale /64 */
+#else
+#error Timer 0 prescale factor 64 not set correctly
+#endif
 
     /* Timer0 overflow interrupt enable */
+#if defined(TIMSK) && defined(TOIE0)
     TIMSK |= _BV(TOIE0);
+#elif defined(TIMSK0) && defined(TOIE0)
+    TIMSK0 |= _BV(TOIE0);
+#else
+#error	Timer 0 overflow interrupt not set correctly
+#endif
+
     sei();
 }
