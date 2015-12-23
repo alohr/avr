@@ -157,7 +157,7 @@ int analog_read(int chan, analogvalue_t *value)
     value->raw = (high << 8) | low;
     value->t = millis();
 
-    return value->v;
+    return value->raw;
 }
 
 int getdelay(analogvalue_t *value)
